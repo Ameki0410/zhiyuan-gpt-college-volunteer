@@ -1,0 +1,78 @@
+# ======= 智愿 · GitHub 上传专用 .gitignore =======
+# ⚠️ 重要：没这个文件会把 API Key 和 50000+ 依赖文件传上去，公开仓库就炸了
+# 生成依据：Python / Virtualenv / FastAPI / Windows / Node / SQLite / 隐私文件（简历/docx）/ IDE
+
+# ---------- 敏感信息：绝对不能传 ----------
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.pub
+
+# 新建文件夹/工作区根目录的简历和私人隐私文件（含你的姓名/学校/电话）
+jianli/1.docx
+jianli/1_原始备份.docx
+jianli/1_已修改.docx
+jianli/潘愉恂-简历-*.docx
+jianli/*.docx
+
+# 本地运行时的数据库/SQLite（含用户注册信息哈希密码）
+*.db
+*.sqlite
+*.sqlite3
+backend/data/*.db
+backend/zhiyuan.db
+backend/data/zhiyuan.db
+
+# 日志/临时文件/缓存
+logs/
+*.log
+_server.log
+__pycache__/
+*.py[cod]
+*$py.class
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Python 虚拟环境（50000+ 依赖文件 1GB+，绝不进仓库）
+.venv/
+venv/
+env/
+ENV/
+
+# IDE 配置（个人信息/本地路径）
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 前端/node（本项目纯原生不用，留着防以后）
+node_modules/
+dist/
+build/
+
+# 系统垃圾（Windows/Mac）
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# 后端 Python 虚拟环境再兜底（怕有不同路径的）
+backend/.venv/
+backend/venv/
+
+# 调试脚本/临时日志（本次生成的各种中间脚本，不影响他人复现）
+jianli/gen_*.py
+jianli/apply_*.py
+jianli/debug_*.py
+jianli/verify_*.py
+jianli/*_output.log
+jianli/*_verify.log
+jianli/_temp.py
+
+# 大模型生成的图片缓存
+reference_site.png
+*.tmp.png

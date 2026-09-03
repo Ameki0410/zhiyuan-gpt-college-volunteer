@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智愿 - AI 高考志愿填报</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif;
+    background: linear-gradient(135deg, #eef2ff 0%, #f5f7fb 50%, #eafff5 100%);
+    color: #2c3e50;
+    min-height: 100vh;
+    padding: 16px;
+  }
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(80,90,180,.18);
+    /* 固定卡片高度 + flex 列布局，子项 flex:1 可填满剩余高度 */
+    height: min(90vh, 760px);
+    display: flex; flex-direction: column;
+  }
+  /* 顶栏 */
+  .header {
+    background: linear-gradient(135deg, #6a8bff 0%, #8a6bff 100%);
+    color: #fff;
+    padding: 18px 16px 22px;
+    text-align: center;
+    position: relative;
+  }
+  .header h1 { font-size: 22px; letter-spacing: 2px; }
+  .header p { font-size: 12px; opacity: .85; margin-top: 4px; }
+  .back-btn {
+    position: absolute; left: 12px; top: 14px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(255,255,255,.25); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; cursor: pointer;
+  }
+  /* 步骤指示 */
+  .steps { display: flex; padding: 14px 16px 6px; gap: 8px; }
+  .step-dot { flex: 1; height: 4px; border-radius: 2px; background: #e0e0e0; transition: .3s; }
+  .step-dot.on { background: #6a8bff; }
+  .step-labels { display: flex; padding: 0 16px 10px; font-size: 11px; color: #999; }
+  .step-labels span { flex: 1; text-align: center; }
+  .step-labels span.on { color: #6a8bff; font-weight: bold; }
+  /* 内容 */
+  .content { padding: 8px 16px 20px; flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+  .page { display: none; }
+  .page.active { display: block; animation: fade .35s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .sec-title {
+    font-size: 16px; font-weight: bold; margin: 14px 0 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sec-title::before { content: ""; width: 4px; height: 16px; background: #6a8bff; border-radius: 2px; }
+  .field { margin-bottom: 16px; }
+  .field > label { display: block; font-size: 13px; color: #5a6a7a; margin-bottom: 8px; }
+  /* 通用下拉/输入 */
+  .input, .select {
+    width: 100%; height: 42px; border: 1.5px solid #e1e6ed; border-radius: 10px;
+    padding: 0 12px; font-size: 14px; background: #fbfcfe; color: #2c3e50;
+    outline: none; transition: .2s;
+  }
+  .input:focus, .select:focus { border-color: #6a8bff; background: #fff; }
+  /* 选科 chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 7px 14px; border: 1.5px solid #e1e6ed; background: #f7f9fc;
+    border-radius: 18px; font-size: 13px; color: #5a6a7a; cursor: pointer;
+    user-select: none; transition: .15s;
+  }
+  .chip.on { background: #6a8bff; border-color: #6a8bff; color: #fff; }
+  /* step07：选科达 3 个时其余灰化禁用 */
+  .chip.disabled {
+    opacity: .4; cursor: not-allowed; background: #eef0f4; color: #aeb6c2; border-color: #eef0f4;
+  }
+  /* 成绩输入（step07 修复：箭头与「分」不再重叠） */
+  .score-wrap { display: flex; align-items: center; gap: 10px; }
+  .score-input {
+    flex: 1; height: 42px; border: 1.5px solid #e1e6ed; border-radius: 10px;
+    padding: 0 12px; font-size: 16px; font-weight: bold; text-align: center;
+    background: #fbfcfe; outline: none;
+  }
+  .score-arrows { display: flex; flex-direction: column; gap: 2px; }
+  .score-arrows span {
+    width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent;
+    cursor: pointer;
+  }
+  .arrow-up { border-bottom: 7px solid #6a8bff; }
+  .arrow-down { border-top: 7px solid #6a8bff; }
+  .score-unit { font-size: 15px; color: #5a6a7a; font-weight: bold; }
+  /* step07：隐藏 number 输入框原生箭头，统一用自定义箭头，避免与「分」重叠 */
+  .score-input::-webkit-outer-spin-button,
+  .score-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .score-input { -moz-appearance: textfield; }
+  /* 按钮 */
+  .btn {
+    width: 100%; height: 48px; border: none; border-radius: 12px;
+    font-size: 16px; font-weight: bold; color: #fff; cursor: pointer;
+    background: linear-gradient(135deg, #6a8bff, #8a6bff); transition: .2s;
+    margin-top: 14px; box-shadow: 0 6px 16px rgba(106,139,255,.35);
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn.ghost {
+    background: #fff; color: #6a8bff; border: 1.5px solid #6a8bff; box-shadow: none;
+  }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { margin-top: 14px; }
+  /* 加载 */
+  .loading { text-align: center; padding: 50px 0; }
+  .loader {
+    width: 48px; height: 48px; border: 5px solid #e8ecf3; border-top-color: #6a8bff;
+    border-radius: 50%; margin: 0 auto 16px; animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading p { color: #8a94a6; font-size: 14px; }
+  .loading .dots::after { content: "•••"; letter-spacing: 4px; animation: blink 1.2s infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+  /* 方案 */
+  .plan-tag {
+    display: inline-block; background: #eef2ff; color: #6a8bff; font-size: 12px;
+    padding: 4px 10px; border-radius: 10px; margin-bottom: 4px;
+  }
+  .plan-score { font-size: 13px; color: #8a94a6; margin-bottom: 14px; }
+  .plan-group { margin-bottom: 18px; }
+  .plan-group > h3 { font-size: 14px; color: #2c3e50; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .plan-group .badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 8px; color: #fff;
+  }
+  .b-red { background: #ff7a7a; } .b-org { background: #ffb04a; } .b-grn { background: #5dd39e; } .b-blu { background: #6a8bff; }
+  .plan-item {
+    border: 1px solid #eef0f4; border-radius: 10px; padding: 12px; margin-bottom: 8px;
+    background: #fbfcfe;
+  }
+  .plan-item .row1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .plan-item .sch { font-weight: bold; font-size: 14px; }
+  .plan-item .risk { font-size: 11px; color: #fff; padding: 2px 7px; border-radius: 7px; }
+  .plan-item .major { font-size: 13px; color: #5a6a7a; }
+  .plan-item .note { font-size: 12px; color: #97a1ae; margin-top: 4px; }
+  .tip { font-size: 12px; color: #97a1ae; text-align: center; margin-top: 8px; }
+
+  /* ====== step16 动效：按钮涟漪 + 过渡 + 登录抽屉 + 方案入场 ====== */
+  /* 按钮 hover / 涟漪 */
+  .btn { position: relative; overflow: hidden; transition: transform .15s ease, box-shadow .2s ease; }
+  .btn:hover { box-shadow: 0 10px 22px rgba(106,139,255,.45); }
+  .btn:active { transform: scale(.98); }
+  .btn .ripple {
+    position: absolute; border-radius: 50%; transform: scale(0);
+    background: rgba(255,255,255,.65); animation: ripple .6s ease-out; pointer-events: none;
+  }
+  .btn.ghost .ripple { background: rgba(106,139,255,.25); }
+  @keyframes ripple { to { transform: scale(4); opacity: 0; } }
+
+  /* 方案卡逐项入场 */
+  .plan-item { animation: slideIn .4s ease both; }
+  .plan-group:nth-child(1) .plan-item { animation-delay: .05s; }
+  .plan-group .plan-item:nth-child(2) { animation-delay: .15s; }
+  .plan-group:nth-child(2) .plan-item:nth-child(1) { animation-delay: .25s; }
+  .plan-group:nth-child(2) .plan-item:nth-child(2) { animation-delay: .35s; }
+  .plan-group:nth-child(3) .plan-item:nth-child(1) { animation-delay: .45s; }
+  .plan-group:nth-child(3) .plan-item:nth-child(2) { animation-delay: .55s; }
+  .plan-group:nth-child(4) .plan-item:nth-child(1) { animation-delay: .65s; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* chip 点击微缩放 */
+  .chip { transition: transform .1s ease, background .15s ease, border-color .15s ease, color .15s ease, opacity .15s ease; }
+  .chip:not(.disabled):active { transform: scale(.94); }
+
+  /* ====== 新增：顶部 Tab（填报方案 / 专业顾问） ====== */
+  .app-tabs {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 16px 0; background: linear-gradient(135deg,#eef2ff 0%, #e0e7ff 100%);
+    border-bottom: 1px solid #dde3f5;
+  }
+  .app-tab {
+    flex: 0 0 auto; padding: 8px 16px; border-radius: 999px;
+    font-size: 14px; color: #5b6786; cursor: pointer; user-select: none;
+    border: 1.5px solid transparent; transition: .18s ease;
+  }
+  .app-tab:hover { color: #3e4c6a; }
+  .app-tab.on {
+    background: #fff; color: #4964ff; border-color: #c7d2ff;
+    box-shadow: 0 4px 10px rgba(73,100,255,.15); font-weight: 700;
+  }
+  .tab-panel { display: none; animation: tabFade .25s ease both; }
+  .tab-panel.active { display: flex; flex-direction: column; flex: 1 1 100% !important; min-height: 0; }
+  @keyframes tabFade { from{opacity:0; transform: translateY(4px);} to{opacity:1; transform:none;} }
+
+  /* ====== 新增：专业顾问聊天界面 ====== */
+  .consult-wrap {
+    display: flex; flex-direction: column;
+    /* 填满 tab-panel 剩余空间，不再依赖 viewport 计算避免坍缩 */
+    flex: 1; height: 100%; min-height: 0;
+    background: #f7f9ff; padding: 12px 16px 0; box-sizing: border-box;
+  }
+  /* 专业顾问：欢迎卡 */
+  .consult-welcome {
+    background: linear-gradient(135deg,#6a8bff,#4f6efc); color: #fff;
+    border-radius: 16px; padding: 18px 18px 16px; margin-bottom: 12px;
+    box-shadow: 0 8px 22px rgba(106,139,255,.3);
+  }
+  .consult-welcome h2 { margin: 0 0 6px; font-size: 18px; }
+  .consult-welcome p { margin: 0; font-size: 13px; line-height: 1.7; opacity: .92; }
+  .consult-quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .consult-quick span {
+    background: rgba(255,255,255,.18); color: #fff; padding: 6px 12px;
+    border-radius: 999px; font-size: 12.5px; cursor: pointer; backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,.35); transition: .15s;
+  }
+  .consult-quick span:hover { background: rgba(255,255,255,.32); transform: translateY(-1px); }
+
+  .consult-messages {
+    flex: 1 1 auto; overflow-y: auto; padding: 4px 2px 10px;
+  }
+  .msg-row { display: flex; margin: 10px 0; }
+  .msg-row .bubble {
+    max-width: 82%; padding: 10px 14px; border-radius: 14px; line-height: 1.7;
+    font-size: 14px; white-space: pre-wrap; word-break: break-word;
+    box-shadow: 0 3px 10px rgba(20,40,80,.06);
+  }
+  .msg-row.user { justify-content: flex-end; }
+  .msg-row.user .bubble {
+    background: linear-gradient(135deg,#6a8bff,#4f6efc); color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .msg-row.ai { justify-content: flex-start; }
+  .msg-row.ai .bubble {
+    background: #fff; color: #2d3652;
+    border: 1px solid #eef0f6; border-bottom-left-radius: 4px;
+  }
+  .msg-row.ai .avatar {
+    flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%;
+    background: linear-gradient(135deg,#6a8bff,#8aa3ff); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+    margin-right: 8px; margin-top: 2px;
+  }
+  .msg-row.refuse .bubble { background: #fff6ef; color: #d46a1b; border-color: #ffd9bb; }
+
+  .consult-hits {
+    font-size: 12px; color: #8996b3; margin: 4px 0 0 42px;
+  }
+  .consult-hits b { color: #5b6ed8; font-weight: 600; }
+
+  .consult-input-bar {
+    /* 仿 DeepSeek 风格：白色圆角胶囊，左 textarea + 右下小圆形蓝色箭头按钮 */
+    background: #fff; border-radius: 20px;
+    padding: 12px 14px 12px 18px;
+    border: 1px solid #e4e8f5;
+    display: flex; align-items: flex-end; gap: 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 16px rgba(20,40,80,.06);
+    transition: border-color .15s, box-shadow .15s;
+    position: relative;
+  }
+  .consult-input-bar:focus-within {
+    border-color: #6a8bff;
+    box-shadow: 0 6px 20px rgba(106,139,255,.18);
+  }
+  .consult-input-bar textarea {
+    flex: 1; resize: none; border: 0; outline: 0; padding: 4px 0;
+    font-family: inherit; font-size: 15px; line-height: 1.55;
+    min-height: 28px; max-height: 160px;
+    background: transparent; color: #2d3652;
+    overflow-y: auto;
+  }
+  .consult-input-bar textarea::placeholder { color: #a8b1c3; }
+  /* 右下：小圆形蓝色箭头发送按钮 (仿 DeepSeek) */
+  .consult-input-bar .send-btn {
+    /* 覆盖原 .btn 大按钮样式 */
+    flex: 0 0 36px; width: 36px; height: 36px; min-width: 36px;
+    border-radius: 50%;
+    padding: 0; margin: 0;
+    background: linear-gradient(135deg,#6a8bff,#4f6efc);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(106,139,255,.35);
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: opacity .15s, transform .1s;
+    flex-shrink: 0;
+  }
+  .consult-input-bar .send-btn svg { width: 18px; height: 18px; }
+  .consult-input-bar .send-btn:disabled,
+  .consult-input-bar .send-btn[disabled] {
+    opacity: .35; cursor: not-allowed;
+    background: #c7ccda; box-shadow: none;
+  }
+  .consult-input-bar .send-btn:not([disabled]):active { transform: translateY(1px); }
+  .consult-tip { font-size: 12px; color: #8996b3; text-align: center; margin: 0 0 6px; }
+
+  /* 顶部登录区 */
+  .user-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 16px; background: #f7f9ff; border-bottom: 1px solid #eef0f6; font-size: 13px;
+  }
+  .user-bar .mini-btn {
+    border: 1.5px solid #c7d2ff; background: #fff; color: #6a8bff;
+    border-radius: 14px; padding: 3px 10px; font-size: 12px; cursor: pointer;
+    transition: .2s;
+  }
+  .user-bar .mini-btn:hover { background: #eef2ff; }
+  .user-bar .who { color: #4a5870; font-weight: bold; }
+
+  /* 模态抽屉（登录/注册） */
+  .modal-mask {
+    position: fixed; inset: 0; background: rgba(20,30,60,.45); display: none;
+    align-items: center; justify-content: center; z-index: 999;
+    animation: maskFade .2s ease both;
+  }
+  .modal-mask.show { display: flex; }
+  @keyframes maskFade { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    width: 340px; background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    animation: modalIn .28s cubic-bezier(.2,.9,.2,1.2) both;
+  }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: none; } }
+  .modal h3 { font-size: 17px; margin-bottom: 14px; text-align: center; }
+  .modal .tabs { display: flex; background: #f3f5fb; border-radius: 10px; padding: 3px; margin-bottom: 14px; }
+  .modal .tabs span {
+    flex: 1; text-align: center; padding: 6px 0; border-radius: 8px; font-size: 13px; cursor: pointer;
+    color: #7d899e; transition: .2s;
+  }
+  .modal .tabs span.on { background: #fff; color: #6a8bff; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
+  .modal .field { margin-bottom: 10px; }
+  .modal label { display: block; font-size: 12px; color: #7d899e; margin-bottom: 4px; }
+  .modal .m-btn { width: 100%; height: 42px; margin-top: 6px; }
+  .modal .err { color: #ff5a5a; font-size: 12px; margin-top: 6px; min-height: 16px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- step15/16：顶部用户栏（登录/注册/考生信息自动回填） -->
+  <div class="user-bar" id="userBar">
+    <span class="who" id="whoText">未登录</span>
+    <div>
+      <button class="mini-btn" onclick="openAuth('login')">登录</button>
+      <button class="mini-btn" onclick="openAuth('register')">注册</button>
+    </div>
+  </div>
+
+  <div class="header">
+    <div class="back-btn" id="backBtn" style="display:none">‹</div>
+    <h1>智 愿</h1>
+    <p>AI 驱动的高考志愿填报助手</p>
+  </div>
+
+  <!-- 顶部 Tab 切换 -->
+  <div class="app-tabs">
+    <div class="app-tab on" data-tab="plan">📝 填报方案</div>
+    <div class="app-tab" data-tab="consult">🎓 专业顾问</div>
+  </div>
+
+  <!-- Tab 1：填报方案（原页面） -->
+  <div class="tab-panel active" id="tab-plan">
+
+  <div class="steps">
+    <div class="step-dot on" data-s="1"></div>
+    <div class="step-dot" data-s="2"></div>
+    <div class="step-dot" data-s="3"></div>
+  </div>
+  <div class="step-labels">
+    <span class="on">考生信息</span><span>兴趣偏好</span><span>生成方案</span>
+  </div>
+
+  <div class="content">
+
+    <!-- 步骤1 考生信息 -->
+    <div class="page active" id="p1">
+      <div class="sec-title">考生信息</div>
+
+      <div class="field">
+        <label>省份</label>
+        <select class="select" id="province" size="1">
+          <!-- step08：选项由 data.js 渲染 -->
+          <option value="">请选择省份</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>选科组合（最多选 3 个）</label>
+        <div class="chips" id="subjects"><!-- step08：由 data.js 渲染 --></div>
+      </div>
+
+      <div class="field">
+        <label>高考成绩</label>
+        <div class="score-wrap">
+          <input type="number" class="score-input" id="score" min="0" max="750" value="600">
+          <div class="score-arrows">
+            <span class="arrow-up" onclick="adjScore(1)"></span>
+            <span class="arrow-down" onclick="adjScore(-1)"></span>
+          </div>
+          <span class="score-unit">分</span>
+        </div>
+      </div>
+
+      <button class="btn" onclick="go(2)">下一步</button>
+    </div>
+
+    <!-- 步骤2 兴趣偏好 -->
+    <div class="page" id="p2">
+      <div class="sec-title">兴趣偏好</div>
+
+      <div class="field">
+        <label>目标院校</label>
+        <div class="chips" data-group="school" id="grp-school"><!-- step08：由 data.js 渲染 --></div>
+      </div>
+      <div class="field">
+        <label>地域偏好</label>
+        <div class="chips" data-group="region" id="grp-region"><!-- step08：由 data.js 渲染 --></div>
+      </div>
+      <div class="field">
+        <label>专业偏好</label>
+        <div class="chips" data-group="major" id="grp-major"><!-- step08：由 data.js 渲染 --></div>
+      </div>
+
+      <div class="field">
+        <label>优先策略</label>
+        <div class="chips" data-group="strategy" id="grp-strategy"><!-- step08：由 data.js 渲染 --></div>
+      </div>
+
+      <div class="field">
+        <label>毕业规划</label>
+        <select class="select" id="gradPlan"><!-- step08：由 data.js 渲染 --></select>
+      </div>
+
+      <div class="field">
+        <label>职业倾向</label>
+        <div class="chips" data-group="career" id="grp-career"><!-- step08：由 data.js 渲染 --></div>
+      </div>
+
+      <div class="field">
+        <label>学费倾向</label>
+        <div class="chips" data-group="tuition" id="grp-tuition"><!-- step08：由 data.js 渲染 --></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn ghost" onclick="go(1)">上一步</button>
+        <button class="btn" onclick="generate()">生成方案</button>
+      </div>
+    </div>
+
+    <!-- 步骤3 方案 -->
+    <div class="page" id="p3">
+      <div class="sec-title">AI 生成方案</div>
+      <div id="planLoading" class="loading">
+        <div class="loader"></div>
+        <p>大模型正在分析你的成绩与偏好<span class="dots"></span></p>
+        <p style="font-size:12px;margin-top:6px">请稍候，方案生成中</p>
+      </div>
+      <div id="planResult" style="display:none"></div>
+    </div>
+
+  </div><!-- /content -->
+  </div><!-- /tab-panel#tab-plan -->
+
+  <!-- Tab 2：专业顾问（新增） -->
+  <div class="tab-panel" id="tab-consult">
+    <div class="consult-wrap">
+      <div class="consult-welcome">
+        <h2>🎓 AI 高考专业顾问</h2>
+        <p>围绕「高考选专业、专业学习内容、就业前景/考研发展」8 大方向，有问必答。<br>
+        内置教育部本科专业知识库，回答更准、不瞎编。</p>
+        <div class="consult-quick" id="quickAsks">
+          <span>计算机科学与技术和软件工程有什么区别？</span>
+          <span>临床医学必须选化学吗？</span>
+          <span>我 600 分 物化生 适合学什么？</span>
+          <span>人工智能专业就业方向和薪资？</span>
+          <span>法学和经济学怎么选？</span>
+          <span>口腔医学考研建议？</span>
+        </div>
+      </div>
+
+      <div class="consult-messages" id="consultMsgs"></div>
+
+      <div class="consult-input-bar">
+        <textarea id="consultInput" rows="1" placeholder="问我任何关于专业/就业/考研/选科的问题…（Ctrl+Enter 换行，Enter 发送）"></textarea>
+        <button class="send-btn" id="consultSend" disabled aria-label="发送">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M4 12L20 4L12 20L10 14L4 12Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="currentColor" opacity="0.95"/>
+          </svg>
+        </button>
+      </div>
+      <p class="consult-tip">回答由大模型 + 本科专业知识库联合生成，仅供参考，具体请以教育部最新目录和高校招生章程为准。</p>
+    </div>
+  </div><!-- /tab-panel#tab-consult -->
+</div><!-- /app -->
+
+<!-- step08：静态配置数据外置 -->
+<script src="data.js"></script>
+<!-- step09：动态数据外置（模拟后端返回，接入后端后移除） -->
+<script src="test_data.js"></script>
+<script>
+  /* ===== step08：渲染静态配置数据（数据与逻辑分离） ===== */
+  function renderStatic() {
+    // 省份下拉
+    var psel = document.getElementById('province');
+    STATIC_DATA.provinces.forEach(function(p) {
+      var o = document.createElement('option');
+      o.textContent = p;
+      psel.appendChild(o);
+    });
+    // 选科（默认不选）
+    renderChips('subjects', STATIC_DATA.subjects, false);
+    // 偏好组（默认第一项「不限/分数优先」选中）
+    renderChips('grp-school', STATIC_DATA.schools, true);
+    renderChips('grp-region', STATIC_DATA.regions, true);
+    renderChips('grp-major', STATIC_DATA.majors, true);
+    renderChips('grp-strategy', STATIC_DATA.strategies, true);
+    renderChips('grp-career', STATIC_DATA.careers, true);
+    renderChips('grp-tuition', STATIC_DATA.tuition, true);
+    // 毕业规划下拉
+    var gsel = document.getElementById('gradPlan');
+    STATIC_DATA.gradPlans.forEach(function(g) {
+      var o = document.createElement('option');
+      o.textContent = g;
+      gsel.appendChild(o);
+    });
+  }
+  function renderChips(containerId, items, selectFirst) {
+    var c = document.getElementById(containerId);
+    c.innerHTML = '';
+    items.forEach(function(v, i) {
+      var s = document.createElement('span');
+      s.className = 'chip' + (selectFirst && i === 0 ? ' on' : '');
+      s.dataset.v = v;
+      s.textContent = v;
+      c.appendChild(s);
+    });
+  }
+  renderStatic();
+
+  /* ===== step09：动态数据已抽到 test_data.js（planData 由其提供） ===== */
+  // 开发完后端后，将改由 fetch('/api/data') 获取，test_data.js 不再需要。
+
+  /* ===== 步骤切换 ===== */
+  function go(step) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('p' + step).classList.add('active');
+    document.querySelectorAll('.step-dot').forEach(d => d.classList.toggle('on', +d.dataset.s <= step));
+    document.querySelectorAll('.step-labels span').forEach((s, i) => s.classList.toggle('on', i === step - 1));
+    document.getElementById('backBtn').style.display = step > 1 ? 'flex' : 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.getElementById('backBtn').onclick = () => {
+    const cur = +document.querySelector('.page.active').id.replace('p','');
+    if (cur > 1) go(cur - 1);
+  };
+
+  /* ===== 成绩加减 ===== */
+  function adjScore(d) {
+    var el = document.getElementById('score');
+    var v = parseInt(el.value || 0) + d;
+    if (v < 0) v = 0; if (v > 750) v = 750;
+    el.value = v;
+  }
+
+  /* ===== chips 交互 ===== */
+  // 选科：最多 3 个（step06 仅阻止，无灰化；step07 加灰化）
+  document.getElementById('subjects').addEventListener('click', function(e) {
+    var c = e.target.closest('.chip'); if (!c) return;
+    // step07：灰化项不响应
+    if (c.classList.contains('disabled')) return;
+    if (c.classList.contains('on')) { c.classList.remove('on'); refreshSubjectLimit(); return; }
+    var onCount = this.querySelectorAll('.chip.on').length;
+    if (onCount >= 3) return; // 已达上限，不再选中（已被灰化，理论上点不到）
+    c.classList.add('on');
+    refreshSubjectLimit();
+  });
+  // step07：选满 3 个时将其余项灰化，不足时恢复
+  function refreshSubjectLimit() {
+    var onCount = document.querySelectorAll('#subjects .chip.on').length;
+    document.querySelectorAll('#subjects .chip').forEach(c => {
+      if (!c.classList.contains('on')) c.classList.toggle('disabled', onCount >= 3);
+    });
+  }
+  // 其余偏好组：单选（点「不限」清空其它，点具体项取消「不限」）
+  document.querySelectorAll('.chips[data-group]').forEach(grp => {
+    grp.addEventListener('click', function(e) {
+      var c = e.target.closest('.chip'); if (!c) return;
+      var isUnlimited = c.dataset.v === '不限';
+      this.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+      if (isUnlimited) { c.classList.add('on'); }
+      else { c.classList.add('on'); }
+    });
+  });
+
+  /* ===== 生成方案 ===== */
+  // 取某偏好组当前选中值
+  function grpVal(name) {
+    var on = document.querySelector('.chips[data-group="' + name + '"] .chip.on');
+    return on ? on.dataset.v : '不限';
+  }
+  function generate() {
+    var province = document.getElementById('province').value;
+    var subs = [...document.querySelectorAll('#subjects .chip.on')].map(c => c.dataset.v);
+    var score = document.getElementById('score').value;
+    if (!province) { alert('请选择省份'); go(1); return; }
+    if (subs.length === 0) { alert('请至少选择 1 门科目'); go(1); return; }
+    if (!score) { alert('请填写高考成绩'); go(1); return; }
+
+    go(3);
+    document.getElementById('planLoading').style.display = 'block';
+    document.getElementById('planResult').style.display = 'none';
+
+    // step11：上报后端 /api/data，收到才显示；离线时兜底用 test_data.js 的 planData
+    var payload = {
+      province: province,
+      subjects: subs,
+      score: parseInt(score, 10),
+      school: grpVal('school'),
+      region: grpVal('region'),
+      major: grpVal('major'),
+      strategy: grpVal('strategy'),
+      gradPlan: document.getElementById('gradPlan').value,
+      career: grpVal('career'),
+      tuition: grpVal('tuition')
+    };
+    fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r) { return r.json(); })
+      .then(function(data) { renderPlan(data); })
+      .catch(function(err) {
+        console.warn('后端不可达，使用本地兜底数据：', err);
+        setTimeout(function() { renderPlan(planData); }, 1200);
+      });
+  }
+
+  function renderPlan(d) {
+    d = d || planData;
+    var html = '<div><span class="plan-tag">' + d.autoModeTag + '</span></div>';
+    html += '<div class="plan-score">考生分数：' + d.score + ' 分</div>';
+    ['s06','s07','s08','s09'].forEach(k => {
+      var g = d[k];
+      var lc = { red: 'b-red', org: 'b-org', grn: 'b-grn', blu: 'b-blu' }[g.level];
+      html += '<div class="plan-group"><h3>' + g.title + '<span class="badge ' + lc + '">' + g.items.length + '所</span></h3>';
+      g.items.forEach(it => {
+        var rc = { '冲':'b-red','稳':'b-org','保':'b-grn','备':'b-blu' }[it.risk];
+        html += '<div class="plan-item"><div class="row1"><span class="sch">' + it.sch + '</span><span class="risk ' + rc + '">' + it.risk + '</span></div>';
+        html += '<div class="major">' + it.major + '</div>';
+        html += '<div class="note">' + it.note + '</div></div>';
+      });
+      html += '</div>';
+    });
+    html += '<p class="tip">方案由大模型生成，仅供参考，请结合招生计划审慎填报</p>';
+    html += '<button class="btn ghost" onclick="go(1)" style="margin-top:16px">重新填写</button>';
+    document.getElementById('planLoading').style.display = 'none';
+    document.getElementById('planResult').style.display = 'block';
+    document.getElementById('planResult').innerHTML = html;
+    // step16：生成成功后，如果已登录则保存考生信息到后端，下次自动回填
+    saveProfileIfLogged();
+  }
+
+  /* ===== step16：按钮涟漪动效 ===== */
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn'); if (!btn) return;
+    var r = document.createElement('span'); r.className = 'ripple';
+    var rect = btn.getBoundingClientRect();
+    var size = Math.max(rect.width, rect.height);
+    var x = (e.clientX || rect.left + rect.width / 2) - rect.left - size / 2;
+    var y = (e.clientY || rect.top + rect.height / 2) - rect.top - size / 2;
+    r.style.width = r.style.height = size + 'px';
+    r.style.left = x + 'px'; r.style.top = y + 'px';
+    btn.appendChild(r);
+    setTimeout(function() { r.remove(); }, 700);
+  });
+
+  /* ===== step15：登录/注册（token 存 localStorage；登录成功自动拉取考生信息回填） ===== */
+  var TOKEN_KEY = 'zhiyuan_token';
+  var USER_KEY = 'zhiyuan_user';
+  function authHeader() {
+    var t = localStorage.getItem(TOKEN_KEY);
+    return t ? { 'Authorization': 'Bearer ' + t } : {};
+  }
+  function setLoginInfo(token, username, userId) {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify({ u: username, id: userId }));
+    renderUserBar();
+  }
+  function logout() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    renderUserBar();
+  }
+  function renderUserBar() {
+    var raw = localStorage.getItem(USER_KEY);
+    var bar = document.getElementById('userBar');
+    if (!raw) {
+      bar.innerHTML =
+        '<span class="who">未登录（游客模式）</span>' +
+        '<div><button class="mini-btn" onclick="openAuth(\'login\')">登录</button> ' +
+        '<button class="mini-btn" onclick="openAuth(\'register\')">注册</button></div>';
+      return;
+    }
+    var u = JSON.parse(raw);
+    bar.innerHTML =
+      '<span class="who">👤 ' + u.u + '</span>' +
+      '<div><button class="mini-btn" onclick="saveProfileIfLogged(true); alert(\'已保存 ✓\')">保存信息</button> ' +
+      '<button class="mini-btn" onclick="logout()">退出</button></div>';
+  }
+
+  function openAuth(mode) {
+    var mask = document.getElementById('authMask');
+    mask.classList.add('show');
+    document.getElementById('authTabLogin').classList.toggle('on', mode === 'login');
+    document.getElementById('authTabReg').classList.toggle('on', mode === 'register');
+    document.getElementById('authErr').textContent = '';
+  }
+  function closeAuth() { document.getElementById('authMask').classList.remove('show'); }
+  function currentAuthMode() {
+    return document.getElementById('authTabLogin').classList.contains('on') ? 'login' : 'register';
+  }
+  async function submitAuth() {
+    var u = document.getElementById('authUser').value.trim();
+    var p = document.getElementById('authPass').value;
+    var errEl = document.getElementById('authErr'); errEl.textContent = '';
+    if (!u || !p) { errEl.textContent = '请输入用户名和密码'; return; }
+    try {
+      var mode = currentAuthMode();
+      var r = await fetch('/api/' + mode, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
+      });
+      var data = await r.json();
+      if (!r.ok) { errEl.textContent = data.detail || '失败'; return; }
+      setLoginInfo(data.token, data.username, data.user_id);
+      closeAuth();
+      // 登录后拉取 profile 回填
+      loadProfileAndFill();
+    } catch (e) {
+      errEl.textContent = '网络异常或接口未启用：' + e;
+    }
+  }
+  function collectFormPayload() {
+    var subs = [...document.querySelectorAll('#subjects .chip.on')].map(c => c.dataset.v);
+    return {
+      province: document.getElementById('province').value || null,
+      subjects: subs,
+      score: parseInt(document.getElementById('score').value, 10) || null,
+      school: grpVal('school'),
+      region: grpVal('region'),
+      major: grpVal('major'),
+      strategy: grpVal('strategy'),
+      gradPlan: document.getElementById('gradPlan').value,
+      career: grpVal('career'),
+      tuition: grpVal('tuition')
+    };
+  }
+  function fillFromProfile(p) {
+    if (!p) return;
+    if (p.province) document.getElementById('province').value = p.province;
+    if (p.subjects && p.subjects.length) {
+      document.querySelectorAll('#subjects .chip').forEach(c => c.classList.remove('on', 'disabled'));
+      p.subjects.forEach(v => {
+        var el = document.querySelector('#subjects .chip[data-v="' + v + '"]');
+        if (el) el.classList.add('on');
+      });
+      refreshSubjectLimit();
+    }
+    if (p.score != null) document.getElementById('score').value = p.score;
+    var groups = { school: p.school, region: p.region, major: p.major,
+                   strategy: p.strategy, career: p.career, tuition: p.tuition };
+    Object.keys(groups).forEach(k => {
+      var v = groups[k]; if (!v) return;
+      var container = document.querySelector('.chips[data-group="' + k + '"]');
+      if (!container) return;
+      container.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+      var target = container.querySelector('.chip[data-v="' + v + '"]');
+      if (target) target.classList.add('on');
+    });
+    if (p.gradPlan) document.getElementById('gradPlan').value = p.gradPlan;
+  }
+  async function loadProfileAndFill() {
+    try {
+      var r = await fetch('/api/profile', { headers: authHeader() });
+      if (!r.ok) return;
+      var d = await r.json();
+      fillFromProfile(d.profile);
+    } catch (e) { /* ignore */ }
+  }
+  async function saveProfileIfLogged(silent) {
+    if (!localStorage.getItem(TOKEN_KEY)) { if (silent) alert('请先登录'); return; }
+    try {
+      var body = collectFormPayload();
+      await fetch('/api/profile', {
+        method: 'PUT',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, authHeader()),
+        body: JSON.stringify(body)
+      });
+    } catch (e) { if (silent) alert('保存失败：' + e); }
+  }
+
+  renderUserBar();
+  // 如果已登录，自动拉取上次保存的考生信息回填
+  if (localStorage.getItem(TOKEN_KEY)) loadProfileAndFill();
+
+  /* ===== 新增：专业顾问 Tab 切换 ===== */
+  var CONSULT_HIST_KEY = 'zhiyuan_consult_history_v1';
+  function switchTab(name) {
+    document.querySelectorAll('.app-tab').forEach(function(t) {
+      t.classList.toggle('on', t.dataset.tab === name);
+    });
+    document.getElementById('tab-plan').classList.toggle('active', name === 'plan');
+    document.getElementById('tab-consult').classList.toggle('active', name === 'consult');
+    if (name === 'consult') {
+      // 切到专业顾问：懒加载一次历史 + 滚到底
+      if (!document.getElementById('consultMsgs').dataset.ready) {
+        restoreHistory();
+        document.getElementById('consultMsgs').dataset.ready = '1';
+      }
+      setTimeout(scrollMsgs, 30);
+    }
+  }
+  document.querySelectorAll('.app-tab').forEach(function(t) {
+    t.addEventListener('click', function() { switchTab(t.dataset.tab); });
+  });
+
+  /* ===== 专业顾问：聊天 UI + 接口 ===== */
+  function scrollMsgs() {
+    var el = document.getElementById('consultMsgs');
+    if (el) el.scrollTop = el.scrollHeight;
+  }
+  function addMsg(role, text, extra) {
+    var box = document.getElementById('consultMsgs');
+    var row = document.createElement('div');
+    row.className = 'msg-row ' + (role === 'user' ? 'user'
+      : ((extra && extra.source === 'refuse') ? 'ai refuse' : 'ai'));
+    var html = '';
+    if (role !== 'user') {
+      html += '<div class="avatar">🎓</div>';
+      html += '<div>';
+      html += '<div class="bubble">' + escapeHtml(text) + '</div>';
+      if (extra && extra.hits && extra.hits.length) {
+        html += '<div class="consult-hits">参考专业知识库：<b>'
+          + extra.hits.map(escapeHtml).join('</b>、<b>') + '</b></div>';
+      }
+      html += '</div>';
+    } else {
+      html += '<div class="bubble">' + escapeHtml(text) + '</div>';
+    }
+    row.innerHTML = html;
+    box.appendChild(row);
+    scrollMsgs();
+  }
+  function escapeHtml(s) {
+    return ('' + s).replace(/[&<>"']/g, function(c) {
+      return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c];
+    });
+  }
+  function saveHistory() {
+    var all = document.querySelectorAll('#consultMsgs .msg-row');
+    var arr = [];
+    all.forEach(function(row) {
+      var b = row.querySelector('.bubble'); if (!b) return;
+      if (row.classList.contains('user')) arr.push({ role:'user', content: b.textContent });
+      else arr.push({ role:'assistant', content: b.textContent });
+    });
+    // 最多存最近 30 条
+    if (arr.length > 30) arr = arr.slice(arr.length - 30);
+    try { localStorage.setItem(CONSULT_HIST_KEY, JSON.stringify(arr)); } catch(e) {}
+  }
+  function restoreHistory() {
+    try {
+      var raw = localStorage.getItem(CONSULT_HIST_KEY);
+      if (!raw) return;
+      var arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return;
+      arr.forEach(function(m) {
+        if (m.role === 'user') addMsg('user', m.content);
+        else addMsg('ai', m.content, {});
+      });
+    } catch(e) {}
+  }
+  function buildHistory(max) {
+    max = max || 10;
+    try {
+      var raw = localStorage.getItem(CONSULT_HIST_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+    } catch(e) { var arr = []; }
+    if (!Array.isArray(arr)) arr = [];
+    return arr.slice(-max * 2);
+  }
+  var sending = false;
+  async function sendMsg(userText) {
+    userText = (userText || '').trim();
+    if (!userText || sending) return;
+    sending = true;
+    document.getElementById('consultSend').disabled = true;
+    addMsg('user', userText);
+    saveHistory();
+
+    // 临时 AI 占位（三点动画）
+    var box = document.getElementById('consultMsgs');
+    var tmpRow = document.createElement('div');
+    tmpRow.className = 'msg-row ai';
+    tmpRow.id = '_tmpAi';
+    tmpRow.innerHTML = '<div class="avatar">🎓</div><div class="bubble" style="min-width:64px">思考中<span class="dots"></span></div>';
+    box.appendChild(tmpRow); scrollMsgs();
+
+    try {
+      var r = await fetch('/api/consult/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userText, history: buildHistory(6) })
+      });
+      var d = await r.json();
+      if (!r.ok) {
+        var msg = (d && d.detail) || ('HTTP ' + r.status);
+        if (r.status === 429) msg = '提问太频繁啦，休息 10 秒再试试～';
+        d = { reply: '⚠️ ' + msg, source: 'mock', hits: [] };
+      }
+    } catch (e) {
+      d = { reply: '网络异常，请检查后端是否启动。（提示：需先双击 backend/start_server.bat）', source: 'mock', hits: [] };
+    }
+
+    // 移除占位
+    var old = document.getElementById('_tmpAi');
+    if (old) old.remove();
+    addMsg('ai', d.reply || '(空回复)', { source: d.source || 'llm', hits: d.hits || [] });
+    saveHistory();
+
+    sending = false;
+    // 发送结束：按当前输入内容是否为空决定按钮是否可点
+    var inp = document.getElementById('consultInput');
+    document.getElementById('consultSend').disabled = !inp.value.trim();
+    autoGrow(inp);
+    inp.focus();
+  }
+  // textarea 自动增高（DeepSeek 风格：一行→多行最大 160px）
+  function autoGrow(el) {
+    el.style.height = 'auto';
+    var nh = Math.min(el.scrollHeight, 160);
+    el.style.height = nh + 'px';
+  }
+  function updateSendBtn() {
+    var inp = document.getElementById('consultInput');
+    var hasText = inp.value.trim().length > 0;
+    var btn = document.getElementById('consultSend');
+    btn.disabled = sending || !hasText;
+  }
+  // 发送按钮
+  document.getElementById('consultSend').addEventListener('click', function() {
+    sendMsg(document.getElementById('consultInput').value);
+    var inp = document.getElementById('consultInput');
+    inp.value = '';
+    autoGrow(inp);
+    updateSendBtn();
+  });
+  // 输入框：Ctrl+Enter / ⌘+Enter 换行，单独 Enter 发送
+  (function(){
+    var inp = document.getElementById('consultInput');
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        if (e.ctrlKey || e.metaKey) {
+          // Ctrl/⌘ + Enter = 换行
+          var pos = this.selectionStart || 0;
+          var before = this.value.substring(0, pos);
+          var after = this.value.substring(this.selectionEnd || pos);
+          e.preventDefault();
+          this.value = before + '\n' + after;
+          this.selectionStart = this.selectionEnd = pos + 1;
+          autoGrow(this);
+          updateSendBtn();
+        } else if (!e.shiftKey) {
+          // 单独 Enter = 发送
+          e.preventDefault();
+          sendMsg(this.value);
+          this.value = '';
+          autoGrow(this);
+          updateSendBtn();
+        }
+        // Shift+Enter 走默认换行，不用 preventDefault
+      }
+    });
+    // 输入内容变化：按钮启用/禁用 + 自动增高
+    inp.addEventListener('input', function() {
+      autoGrow(this);
+      updateSendBtn();
+    });
+    // 初始化一次（从 localStorage 恢复后也不会有残留）
+    autoGrow(inp);
+    updateSendBtn();
+  })();
+  // 快捷问题点击
+  document.getElementById('quickAsks').addEventListener('click', function(e) {
+    if (e.target.tagName === 'SPAN') sendMsg(e.target.textContent);
+  });
+  // 清除历史（可选：双击"专业顾问"Tab 清空）
+  document.querySelector('.app-tab[data-tab="consult"]').addEventListener('dblclick', function() {
+    if (!confirm('清空专业顾问的历史对话？')) return;
+    try { localStorage.removeItem(CONSULT_HIST_KEY); } catch(e) {}
+    document.getElementById('consultMsgs').innerHTML = '';
+    document.getElementById('consultMsgs').dataset.ready = '1';
+  });
+</script>
+
+<!-- step15/16：登录/注册模态框 -->
+<div class="modal-mask" id="authMask" onclick="if(event.target===this) closeAuth()">
+  <div class="modal">
+    <h3 id="authTitle">账户</h3>
+    <div class="tabs">
+      <span id="authTabLogin" class="on" onclick="document.getElementById('authTabLogin').classList.add('on');
+        document.getElementById('authTabReg').classList.remove('on'); document.getElementById('authErr').textContent=''">登录</span>
+      <span id="authTabReg" onclick="document.getElementById('authTabReg').classList.add('on');
+        document.getElementById('authTabLogin').classList.remove('on'); document.getElementById('authErr').textContent=''">注册</span>
+    </div>
+    <div class="field">
+      <label>用户名</label>
+      <input class="input" id="authUser" placeholder="2~64 个字符">
+    </div>
+    <div class="field">
+      <label>密码</label>
+      <input class="input" id="authPass" type="password" placeholder="至少 6 位">
+    </div>
+    <button class="btn m-btn" onclick="submitAuth()">提交</button>
+    <div class="err" id="authErr"></div>
+  </div>
+</div>
+</body>
+</html>

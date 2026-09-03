@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智愿 - 高考志愿填报 App 线框图</title>
+<style>
+  /* 线框图风格：灰阶、虚线框、占位块 */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", -apple-system, sans-serif;
+    background: #f0f0f0;
+    color: #333;
+    padding: 20px;
+  }
+  .wireframe-note {
+    text-align: center;
+    background: #fff;
+    border: 2px dashed #999;
+    padding: 8px;
+    margin-bottom: 16px;
+    color: #888;
+    font-size: 13px;
+  }
+  .phone-frame {
+    max-width: 420px;
+    margin: 0 auto;
+    background: #fff;
+    border: 2px solid #333;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,.15);
+  }
+  /* 顶部状态栏占位 */
+  .status-bar {
+    height: 28px;
+    background: #e8e8e8;
+    border-bottom: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 11px;
+    color: #999;
+  }
+  /* 导航头 */
+  .nav-bar {
+    height: 48px;
+    background: #d9d9d9;
+    border-bottom: 1px solid #bbb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    position: relative;
+  }
+  .nav-bar .back {
+    position: absolute;
+    left: 12px;
+    font-size: 18px;
+    color: #555;
+    cursor: pointer;
+  }
+  /* 步骤指示 */
+  .step-indicator {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    background: #f7f7f7;
+    border-bottom: 1px solid #eee;
+  }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #ccc; border: 1px solid #999;
+  }
+  .dot.active { background: #666; }
+  /* 内容区 */
+  .content { padding: 16px; min-height: 480px; }
+  .section-title {
+    font-size: 15px;
+    font-weight: bold;
+    border-left: 4px solid #888;
+    padding-left: 8px;
+    margin: 12px 0 10px;
+  }
+  /* 线框占位组件 */
+  .wf-box {
+    border: 1px dashed #aaa;
+    background: #fafafa;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  .wf-label { font-size: 12px; color: #888; margin-bottom: 6px; }
+  .wf-input {
+    border: 1px solid #bbb;
+    background: #fff;
+    height: 32px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    color: #aaa;
+    font-size: 13px;
+  }
+  .wf-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip {
+    border: 1px solid #aaa;
+    background: #eee;
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 12px;
+    color: #666;
+    cursor: pointer;
+    user-select: none;
+  }
+  .chip.on { background: #999; color: #fff; border-color: #999; }
+  .wf-row { display: flex; gap: 8px; }
+  .wf-row > * { flex: 1; }
+  /* 按钮 */
+  .btn {
+    width: 100%;
+    height: 44px;
+    border: 2px solid #555;
+    background: #ddd;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+  .btn:active { background: #ccc; }
+  /* 方案占位 */
+  .plan-card {
+    border: 1px dashed #aaa;
+    background: #f5f5f5;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+  .plan-card .ph {
+    height: 14px;
+    background: #e0e0e0;
+    border-radius: 3px;
+    margin-bottom: 6px;
+  }
+  .plan-card .ph.w70 { width: 70%; }
+  .plan-card .ph.w50 { width: 50%; }
+  .plan-card .ph.w90 { width: 90%; }
+  /* 加载动画占位 */
+  .loading-ph {
+    text-align: center;
+    color: #999;
+    padding: 60px 0;
+    font-size: 13px;
+  }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid #ddd;
+    border-top: 4px solid #888;
+    border-radius: 50%;
+    margin: 0 auto 12px;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .page { display: none; }
+  .page.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="wireframe-note">
+  📐 线框图 / 交互原型 ｜ 灰阶占位为示意，非最终视觉 ｜ 可点击「下一步」体验交互流程
+</div>
+
+<div class="phone-frame">
+  <div class="status-bar"><span>9:41</span><span>智愿 Wireframe</span><span>100%</span></div>
+  <div class="nav-bar">
+    <span class="back" id="backBtn">‹</span>
+    <span>智愿 · 志愿填报</span>
+  </div>
+  <div class="step-indicator">
+    <div class="dot active" data-step="1"></div>
+    <div class="dot" data-step="2"></div>
+    <div class="dot" data-step="3"></div>
+  </div>
+
+  <div class="content">
+
+    <!-- 步骤1：考生信息 -->
+    <div class="page active" id="page1">
+      <div class="section-title">考生信息</div>
+
+      <div class="wf-box">
+        <div class="wf-label">省份</div>
+        <div class="wf-input" id="wfProvince">请选择省份 ▾</div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-label">选科组合（上限 3 个）</div>
+        <div class="wf-chips" id="wfSubjects">
+          <span class="chip">物理</span>
+          <span class="chip">化学</span>
+          <span class="chip">生物</span>
+          <span class="chip">思想政治</span>
+          <span class="chip">历史</span>
+          <span class="chip">地理</span>
+          <span class="chip">技术</span>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-label">高考成绩</div>
+        <div class="wf-input">▲▼&nbsp;&nbsp;000 &nbsp;分</div>
+      </div>
+
+      <button class="btn" onclick="go(2)">下一步</button>
+    </div>
+
+    <!-- 步骤2：兴趣偏好 -->
+    <div class="page" id="page2">
+      <div class="section-title">兴趣偏好</div>
+
+      <div class="wf-box">
+        <div class="wf-label">目标院校（不限 / 5 热门院校）</div>
+        <div class="wf-chips">
+          <span class="chip on">不限</span>
+          <span class="chip">清华大学</span>
+          <span class="chip">北京大学</span>
+          <span class="chip">复旦大学</span>
+          <span class="chip">上海交大</span>
+          <span class="chip">浙江大学</span>
+        </div>
+      </div>
+      <div class="wf-box">
+        <div class="wf-label">地域偏好（不限 / 5 热门城市）</div>
+        <div class="wf-chips">
+          <span class="chip on">不限</span>
+          <span class="chip">北京</span>
+          <span class="chip">上海</span>
+          <span class="chip">广州</span>
+          <span class="chip">深圳</span>
+          <span class="chip">杭州</span>
+        </div>
+      </div>
+      <div class="wf-box">
+        <div class="wf-label">专业偏好（不限 / 5 热门专业）</div>
+        <div class="wf-chips">
+          <span class="chip on">不限</span>
+          <span class="chip">计算机</span>
+          <span class="chip">金融</span>
+          <span class="chip">医学</span>
+          <span class="chip">法学</span>
+          <span class="chip">电气</span>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-label">优先策略</div>
+        <div class="wf-chips">
+          <span class="chip on">分数优先</span>
+          <span class="chip">地域优先</span>
+          <span class="chip">专业优先</span>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-label">毕业规划</div>
+        <div class="wf-input">请选择 ▾</div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-label">职业倾向</div>
+        <div class="wf-chips">
+          <span class="chip on">不限</span>
+          <span class="chip">互联网</span>
+          <span class="chip">金融</span>
+          <span class="chip">医疗</span>
+          <span class="chip">教育</span>
+          <span class="chip">制造</span>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-label">学费倾向</div>
+        <div class="wf-chips">
+          <span class="chip on">不限</span>
+          <span class="chip">偏低</span>
+          <span class="chip">适中</span>
+          <span class="chip">偏高</span>
+        </div>
+      </div>
+
+      <div class="wf-row">
+        <button class="btn" onclick="go(1)">上一步</button>
+        <button class="btn" onclick="go(3)">生成方案</button>
+      </div>
+    </div>
+
+    <!-- 步骤3：方案展示 -->
+    <div class="page" id="page3">
+      <div class="section-title">AI 生成方案</div>
+      <div id="planLoading">
+        <div class="loading-ph">
+          <div class="spinner"></div>
+          大模型分析中…<br>请稍候
+        </div>
+      </div>
+      <div id="planResult" style="display:none">
+        <div class="wf-box"><div class="wf-label">方案标签：AI智能 · 分数 620</div></div>
+        <div class="plan-card"><div class="ph w70"></div><div class="ph w90"></div><div class="ph w50"></div></div>
+        <div class="plan-card"><div class="ph w50"></div><div class="ph w90"></div><div class="ph w70"></div></div>
+        <div class="plan-card"><div class="ph w90"></div><div class="ph w70"></div><div class="ph w50"></div></div>
+        <button class="btn" onclick="go(1)">重新填写</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // 线框图交互：步骤切换
+  function go(step) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page' + step).classList.add('active');
+    document.querySelectorAll('.dot').forEach(d => {
+      d.classList.toggle('active', +d.dataset.step <= step);
+    });
+    // 进入方案页：模拟加载后展示
+    if (step === 3) {
+      document.getElementById('planLoading').style.display = 'block';
+      document.getElementById('planResult').style.display = 'none';
+      setTimeout(() => {
+        document.getElementById('planLoading').style.display = 'none';
+        document.getElementById('planResult').style.display = 'block';
+      }, 1500);
+    }
+    window.scrollTo(0, 0);
+  }
+  // 返回按钮
+  document.getElementById('backBtn').onclick = () => {
+    const cur = document.querySelector('.page.active').id.replace('page','');
+    if (+cur > 1) go(+cur - 1);
+  };
+  // 选科/策略 chip 切换（仅演示）
+  document.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', () => {
+      // 选科组合上限 3 个
+      const parent = c.parentElement;
+      if (parent.id === 'wfSubjects') {
+        const onCount = parent.querySelectorAll('.chip.on').length;
+        if (!c.classList.contains('on') && onCount >= 3) return; // 超出灰化/阻止
+        c.classList.toggle('on');
+      } else {
+        // 同组单选
+        parent.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+        c.classList.add('on');
+      }
+    });
+  });
+</script>
+</body>
+</html>

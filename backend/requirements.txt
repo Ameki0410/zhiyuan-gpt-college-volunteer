@@ -1,0 +1,10 @@
+# step11-16：后端运行依赖
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+python-dotenv>=1.0.0       # step14：读取 .env
+httpx>=0.27.0              # step13：调用大模型（OpenAI 兼容接口）
+sqlalchemy>=2.0.0          # step15：ORM
+PyMySQL>=1.1.0             # step15：MySQL 驱动
+bcrypt>=4.1.0              # step15：密码哈希（sha256 前置规避 72 字节限制）
+python-jose[cryptography]>=3.3.0  # step15：JWT
+# step17 云端部署按需：redis / gunicorn 等
