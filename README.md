@@ -47,7 +47,7 @@ zhiyuan/
 │   ├── main.py                  # FastAPI 入口 + 日志中间件
 │   ├── config.py                # .env 统一加载
 │   ├── schemas.py               # Pydantic 请求/响应模型
-│   ├── routers/                 # auth（登录）/ consult（专业顾问）/ plan（方案）
+│   ├── routers/                 # auth（登录）/ consult（专业顾问 )
 │   ├── services/                # llm_client / plan_service / consult_service / pwd_hasher
 │   ├── data/                    # mock_plan + undergraduate_majors.json + major_catalog.py
 │   ├── db/                      # base（双引擎）+ models（User/考生信息表）
