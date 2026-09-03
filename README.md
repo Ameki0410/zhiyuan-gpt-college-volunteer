@@ -57,7 +57,6 @@ zhiyuan/
 ├── zhiyuan_app.html             # 前端单页（填报方案 Tab / 专业顾问 Tab）
 ├── data.js / test_data.js       # 静态/动态数据分离
 ├── 高考志愿PRD.md / 后端架构设计.md / 需求调研.md / 高考志愿线框图.html
-└── jianli/                      # 简历修改配套产出（你可自行决定是否公开）
 ```
 
 ## ⚠️ 公开仓库前必读（2 条红线）
